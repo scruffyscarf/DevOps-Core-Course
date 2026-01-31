@@ -1,0 +1,16 @@
+*.exe
+*.exe~
+*.test
+*.out
+go/pkg/mod/cache/
+.env
+.env.local
+*.log
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.swo
+dist/
+build/
