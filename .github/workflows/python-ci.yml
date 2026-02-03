@@ -45,13 +45,24 @@ jobs:
     needs: test
 
     steps:
-      - name: Run Snyk security scan
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Run Snyk security scan for main dependencies
         uses: snyk/actions/python@v1
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           command: test
           args: --file=app_python/requirements.txt
+
+      - name: Run Snyk security scan for dev dependencies
+        uses: snyk/actions/python@v1
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          command: test
+          args: --file=app_python/requirements-dev.txt
 
   docker:
     needs: test
@@ -73,4 +84,4 @@ jobs:
           context: ./app_python
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/devops-info-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/info-service:latest
