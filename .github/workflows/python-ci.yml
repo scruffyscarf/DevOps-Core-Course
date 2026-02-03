@@ -3,6 +3,11 @@ name: Python CI
 on:
   push:
     branches: [ "master", "lab01", "lab02", "lab03" ]
+    paths:
+      - "app_python/**"
+  pull_request:
+    paths:
+      - "app_python/**"
 
 jobs:
   test:
@@ -30,10 +35,15 @@ jobs:
           pip install -r app_python/requirements.txt
           pip install -r app_python/requirements-dev.txt
 
-      - name: Run tests
+      - name: Run tests with coverage
         run: |
           cd app_python
-          pytest
+          pytest --cov=. --cov-fail-under=70 --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: app_python/coverage.xml
 
   security:
     runs-on: ubuntu-latest
@@ -97,4 +107,4 @@ jobs:
           context: ./app_python
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_USERNAME }}/info-service:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/info-service-python:latest

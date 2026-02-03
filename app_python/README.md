@@ -1,5 +1,8 @@
 ![CI](https://github.com/scruffyscarf/DevOps-Core-Course/actions/workflows/python-ci.yml/badge.svg)
 
+![Coverage](https://codecov.io/gh/scruffyscarf/DevOps-Core-Course/branch/lab03/graph/badge.svg)
+
+
 # DevOps Info Service
 
 ## Overview
