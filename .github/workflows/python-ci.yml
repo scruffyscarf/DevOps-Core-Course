@@ -62,7 +62,7 @@ jobs:
           pip install -r app_python/requirements-dev.txt
 
       - name: Run Snyk security scan for main dependencies
-        uses: snyk/actions/python@v1
+        uses: snyk/actions/setup@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
@@ -70,7 +70,7 @@ jobs:
           args: --file=app_python/requirements.txt
 
       - name: Run Snyk security scan for dev dependencies
-        uses: snyk/actions/python@v1
+        uses: snyk/actions/setup@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
