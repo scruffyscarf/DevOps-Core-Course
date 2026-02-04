@@ -36,6 +36,13 @@ jobs:
         run: |
           cd app_go
           go test ./... -coverprofile=coverage.out
+          go tool cover -func=coverage.out | tee coverage.txt
+          TOTAL=$(go tool cover -func=coverage.out | grep total: | awk '{print substr($3, 1, length($3)-1)}')
+          echo "Total coverage: $TOTAL%"
+          if (( $(echo "$TOTAL < 70" | bc -l) )); then
+            echo "Coverage below 70%"
+            exit 1
+          fi
 
       - name: Convert Go coverage to Cobertura
         run: |
@@ -48,6 +55,14 @@ jobs:
         with:
           format: cobertura
           file: app_go/coverage.xml
+          flag-name: go
+          parallel: true
+
+      - name: Finalize Coveralls
+        uses: coverallsapp/github-action@v2
+        with:
+          parallel-finished: true
+
 
   security:
     runs-on: ubuntu-latest
@@ -69,6 +84,7 @@ jobs:
         with:
           command: test
           args: --file=app_go/go.mod
+
 
 
   docker:
