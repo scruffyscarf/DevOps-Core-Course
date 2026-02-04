@@ -3,11 +3,11 @@ name: Python CI
 on:
   push:
     branches: [ "master", "lab01", "lab02", "lab03" ]
-#    paths:
-#     - "app_python/**"
-#  pull_request:
-#    paths:
-#      - "app_python/**"
+    paths:
+      - "app_python/**"
+  pull_request:
+    paths:
+      - "app_python/**"
 
 jobs:
   test:
@@ -38,12 +38,16 @@ jobs:
       - name: Run tests with coverage
         run: |
           cd app_python
-          pytest --cov=. --cov-fail-under=70 --cov-report=xml
+          coverage run -m pytest
+          coverage report --fail-under=70
+          coverage xml
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+      - name: Upload coverage to Coveralls
+        uses: coverallsapp/github-action@v2
         with:
-          files: app_python/coverage.xml
+          format: cobertura
+          file: coverage.xml
+
 
   security:
     runs-on: ubuntu-latest

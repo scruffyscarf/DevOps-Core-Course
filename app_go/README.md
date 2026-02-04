@@ -1,3 +1,7 @@
+![CI](https://github.com/scruffyscarf/DevOps-Core-Course/actions/workflows/go-ci.yml/badge.svg)
+
+[![Coverage Status](https://coveralls.io/repos/github/scruffyscarf/DevOps-Core-Course/badge.svg?branch=lab03)](https://coveralls.io/github/scruffyscarf/DevOps-Core-Course?branch=lab03)
+
 # DevOps Info Service
 
 ## Overview
