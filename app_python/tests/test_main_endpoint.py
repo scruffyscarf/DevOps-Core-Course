@@ -15,4 +15,4 @@ def test_main_endpoint():
     assert "request" in data
     assert "endpoints" in data
 
-    assert data["service"]["name"] == "devops-info-service"
+    assert data["service"]["name"] == "info-service"

@@ -41,7 +41,7 @@ def main_info():
 
     response = {
         "service": {
-            "name": "devops-info-service",
+            "name": "info-service",
             "version": "1.0.0",
             "description": "DevOps course info service",
             "framework": "Flask"
