@@ -3,11 +3,11 @@ name: Python CI
 on:
   push:
     branches: [ "master", "lab01", "lab02", "lab03" ]
-    paths:
-      - "app_python/**"
-  pull_request:
-    paths:
-      - "app_python/**"
+  #   paths:
+  #     - "app_python/**"
+  # pull_request:
+  #   paths:
+  #     - "app_python/**"
 
 jobs:
   test:
@@ -46,7 +46,7 @@ jobs:
         uses: coverallsapp/github-action@v2
         with:
           format: cobertura
-          file: coverage.xml
+          file: app_python/coverage.xml
 
 
   security:
