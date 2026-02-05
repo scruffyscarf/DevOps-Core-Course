@@ -42,7 +42,7 @@ func TestMainEndpoint(t *testing.T) {
 	}
 
 	service := data["service"].(map[string]interface{})
-	if service["name"] != "devops-info-service" {
-		t.Fatalf("expected service name 'devops-info-service', got %v", service["name"])
+	if service["name"] != "info-service" {
+		t.Fatalf("expected service name 'info-service', got %v", service["name"])
 	}
 }

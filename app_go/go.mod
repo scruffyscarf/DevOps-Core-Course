@@ -1,3 +1,3 @@
-module devops-info-service
+module info-service
 
 go 1.22

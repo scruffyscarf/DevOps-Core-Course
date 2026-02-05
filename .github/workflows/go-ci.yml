@@ -3,11 +3,11 @@ name: Go CI
 on:
   push:
     branches: [ "master", "lab01", "lab02", "lab03" ]
-  #   paths:
-  #     - "app_go/**"
-  # pull_request:
-  #   paths:
-  #     - "app_go/**"
+    paths:
+      - "app_go/**"
+  pull_request:
+    paths:
+      - "app_go/**"
 
 jobs:
   test:

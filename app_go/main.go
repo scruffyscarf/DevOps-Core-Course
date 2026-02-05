@@ -81,7 +81,7 @@ func mainHandler(w http.ResponseWriter, r *http.Request) {
 
 	response := ServiceInfo{
 		Service: Service{
-			Name:        "devops-info-service",
+			Name:        "info-service",
 			Version:     "1.0.0",
 			Description: "DevOps course info service",
 			Framework:   "net/http",

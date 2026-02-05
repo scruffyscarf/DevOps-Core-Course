@@ -16,6 +16,7 @@ A simple Python web service that provides system and runtime information.
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+pip install -r requirements-dev.txt
 ```
 
 ## Running the Application
