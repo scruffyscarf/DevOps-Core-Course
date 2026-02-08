@@ -1,0 +1,6 @@
+*.pyc
+__pycache__/
+venv/
+pulumi/venv/
+Pulumi.*.yaml
+key.json

@@ -1,0 +1,11 @@
+name: info-service
+description: A simple Python web service that provides system and runtime information.
+runtime:
+  name: python
+  options:
+    toolchain: pip
+    virtualenv: venv
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: python
