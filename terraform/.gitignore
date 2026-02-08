@@ -2,5 +2,5 @@
 *.tfstate.*
 .terraform*
 .terraform/
-erraform.tfvars
+terraform.tfvars
 key.json
