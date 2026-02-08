@@ -10,11 +10,6 @@ variable "vm_name" {
   default     = "info-service"
 }
 
-variable "github_token" {
-  type      = string
-  sensitive = true
-}
-
 variable "yc_sa_key_file" {
   description = "Path to Yandex Cloud service account key"
   type        = string
