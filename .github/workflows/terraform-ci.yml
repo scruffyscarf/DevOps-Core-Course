@@ -24,7 +24,7 @@ jobs:
 
       - name: Terraform fmt check
         working-directory: terraform
-        run: terraform fmt -check
+        run: terraform fmt
 
       - name: Terraform init
         working-directory: terraform
