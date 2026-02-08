@@ -3,11 +3,11 @@ name: Terraform CI
 on:
   push:
     branches: [ "master", "lab04" ]
-    paths:
-      - "terraform/**"
-  pull_request:
-    paths:
-      - "terraform/**"
+  #   paths:
+  #     - "terraform/**"
+  # pull_request:
+  #   paths:
+  #     - "terraform/**"
 
 jobs:
   terraform:
