@@ -1,0 +1,140 @@
+name: Ansible Deployment
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'ansible/**'
+      - '.github/workflows/ansible-deploy.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'ansible/**'
+
+env:
+  ANSIBLE_CONFIG: ansible/ansible.cfg
+  ANSIBLE_ROLES_PATH: ansible/roles
+  INVENTORY_PATH: ansible/inventory/hosts.ini
+
+jobs:
+  lint:
+    name: Ansible Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install ansible ansible-lint
+
+      - name: Run ansible-lint
+        run: |
+          cd ansible
+          ansible-lint playbooks/*.yml
+
+
+
+  deploy:
+    name: Deploy Application
+    needs: lint
+    runs-on: ubuntu-latest
+    environment: production
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Ansible and dependencies
+        run: |
+          pip install ansible
+          pip install docker
+          ansible-galaxy collection install community.docker
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519.pub
+          chmod 600 ~/.ssh/id_ed25519.pub
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Configure Ansible Vault
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_password
+          chmod 600 /tmp/vault_password
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/id_ed25519.pub ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}
+
+      - name: Deploy with Ansible
+        run: |
+          cd ansible
+        
+          ansible-playbook playbooks/deploy.yml \
+            -i inventory/hosts.ini \
+            --vault-password-file /tmp/vault_password \
+            --tags "app_deploy,compose" \
+            --diff
+          
+      - name: Verify Deployment
+        run: |
+          
+          echo "Waiting 15 seconds for application to initialize..."
+          sleep 15
+          
+          MAX_RETRIES=5
+          RETRY_COUNT=0
+          
+          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
+            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+              http://${{ secrets.VM_HOST }}:8000/health || true)
+            
+            if [ "$HEALTH_STATUS" = "200" ]; then
+              echo "Health check passed (HTTP $HEALTH_STATUS)"
+              break
+            else
+              RETRY_COUNT=$((RETRY_COUNT+1))
+              echo "Attempt $RETRY_COUNT/$MAX_RETRIES: Health check failed (HTTP $HEALTH_STATUS)"
+              sleep 10
+            fi
+          done
+          
+          if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+            echo "Health check failed after $MAX_RETRIES attempts"
+            exit 1
+          fi
+          
+          echo "Testing main endpoint..."
+          RESPONSE=$(curl -s http://${{ secrets.VM_HOST }}:8000/ || echo "No response")
+          if [ -n "$RESPONSE" ]; then
+            echo "Main endpoint responded"
+          else
+            echo "Main endpoint failed"
+            exit 1
+          fi
+          
+          echo "=== All deployment verifications passed ==="
+          
+      - name: Cleanup sensitive files
+        if: always()
+        run: |
+          rm -f ~/.ssh/id_ed25519.pub
+          rm -f /tmp/vault_password
+          echo "Sensitive files removed"

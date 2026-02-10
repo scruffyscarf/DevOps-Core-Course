@@ -1,0 +1,107 @@
+---
+- name: Wipe web application - confirmation check
+  debug:
+    msg: |
+      ===========================================
+      WIPE OPERATION INITIATED
+
+      This will remove:
+      1. Docker containers for {{ app_name }}
+      2. Docker volumes for {{ app_name }}
+      3. Application directory: {{ compose_project_dir }}
+      4. Docker images (optional)
+
+      Wipe variable: {{ web_app_wipe }}
+      Tag: web_app_wipe
+      ===========================================
+  tags:
+    - web_app_wipe
+    - confirmation
+
+- name: Wipe application containers and volumes
+  block:
+    - name: Check if Docker Compose project exists
+      stat:
+        path: "{{ compose_project_dir }}/docker-compose.yml"
+      register: compose_file
+      tags:
+        - web_app_wipe
+        - check
+
+    - name: Stop and remove Docker Compose project
+      community.docker.docker_compose_v2:
+        project_src: "{{ compose_project_dir }}"
+        state: absent
+        remove_orphans: yes
+        remove_volumes: "{{ wipe_remove_volumes | default(true) }}"
+        remove_images: "{{ wipe_remove_images | default('none') }}"
+      when: compose_file.stat.exists
+      register: compose_removed
+      tags:
+        - web_app_wipe
+        - docker_compose
+
+    - name: Remove application directory
+      file:
+        path: "{{ compose_project_dir }}"
+        state: absent
+      when: compose_removed is defined or not compose_file.stat.exists
+      register: dir_removed
+      tags:
+        - web_app_wipe
+        - cleanup
+
+    - name: Remove Docker images
+      docker_image:
+        name: "{{ docker_image }}"
+        state: absent
+        force: "{{ wipe_force_remove_images | default(false) }}"
+      when: wipe_remove_images | default('none') == 'all'
+      tags:
+        - web_app_wipe
+        - images
+
+  rescue:
+    - name: Handle wipe failure
+      debug:
+        msg: "Wipe operation partially failed. Manual cleanup may be required."
+      tags:
+        - web_app_wipe
+        - rescue
+
+  always:
+    - name: Verify wipe completion
+      shell: |
+        set -o pipefail; docker ps -a | grep "{{ app_name }}" || true
+      register: remaining_containers
+      changed_when: false
+      failed_when: false
+      tags:
+        - web_app_wipe
+        - verification
+
+    - name: Display wipe results
+      debug:
+        msg: |
+          ===========================================
+          WIPE OPERATION COMPLETED
+
+          Compose file existed: {{ compose_file.stat.exists | default(false) }}
+          Directory removed: {{ dir_removed.changed | default(false) }}
+
+          Remaining containers:
+          {% if remaining_containers.stdout %}
+          {{ remaining_containers.stdout }}
+          {% else %}
+          None - all containers removed successfully
+          {% endif %}
+
+          Application directory exists: {{ ansible_facts['file_exists'][compose_project_dir] | default(false) }}
+          ===========================================
+      tags:
+        - web_app_wipe
+        - summary
+
+  tags:
+    - web_app_wipe
+    - block_wipe
