@@ -63,12 +63,3 @@ resource "yandex_compute_instance" "vm" {
     ssh-keys = "ubuntu:${var.ssh_public_key}"
   }
 }
-
-resource "github_repository" "course_repo" {
-  name        = "DevOps-Core-Course"
-  description = "DevOps course labs"
-  visibility  = "public"
-
-  has_issues = true
-  has_wiki   = true
-}

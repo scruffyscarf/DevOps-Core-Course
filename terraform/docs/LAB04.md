@@ -1,5 +1,7 @@
 # Lab 4 — Infrastructure as Code (Terraform & Pulumi)
 
+
+
 ## Cloud Provider - Yandex Cloud
 
 - **Accessibility** — no problems with access and payment
