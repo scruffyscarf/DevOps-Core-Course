@@ -39,7 +39,7 @@ jobs:
       - name: Run ansible-lint
         run: |
           cd ansible
-          ansible-lint playbooks/*.yml --skip-tags "vault"
+          ansible-lint playbooks/*.yml
 
 
 

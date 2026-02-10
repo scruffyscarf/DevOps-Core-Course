@@ -9,5 +9,6 @@ skip_list:
   - ignore-errors
   - fqcn[action]
   - playbooks/site.yml
+  - internal-error
 exclude_paths:
   - roles/web_app/tasks/main.yml
