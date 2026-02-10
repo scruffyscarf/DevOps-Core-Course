@@ -23,12 +23,6 @@ variable "folder_id" {
   type = string
 }
 
-variable "yc_zone" {
-  description = "Yandex Cloud Zone"
-  type        = string
-  default     = "ru-central1-a"
-}
-
 variable "ssh_public_key" {
   description = "SSH public key for VM access"
   type        = string
