@@ -1,0 +1,105 @@
+name: Ansible Multi-App Matrix Deployment
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'ansible/roles/web_app/**'
+      - 'ansible/playbooks/deploy_all.yml'
+      - '.github/workflows/ansible-deploy-matrix.yml'
+      
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'staging'
+      wipe_all:
+        description: 'Wipe all apps before deploy'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  matrix-deployment:
+    name: Deploy ${{ matrix.app.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        app:
+          - name: Python
+            playbook: deploy_python.yml
+            var_file: app_python.yml
+            port: 8000
+            timeout: 30
+            
+          - name: Go
+            playbook: deploy_bonus.yml
+            var_file: app_bonus.yml
+            port: 8001
+            timeout: 20
+            
+          - name: Rust
+            playbook: deploy_bonus_rust.yml
+            var_file: app_bonus_rust.yml
+            port: 8002
+            timeout: 15
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          
+      - name: Install Ansible
+        run: pip install ansible
+        
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+          
+      - name: Create vault password file
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
+          
+      - name: Deploy ${{ matrix.app.name }}
+        run: |
+          cd ansible
+          
+          EXTRA_VARS="-e app_port=${{ matrix.app.port }}"
+          
+          if [ "${{ github.event.inputs.wipe_all }}" = "true" ]; then
+            EXTRA_VARS="$EXTRA_VARS -e web_app_wipe=true"
+          fi
+          
+          if [ "${{ matrix.app.name }}" = "Python" ]; then
+            EXTRA_VARS="$EXTRA_VARS -e app_environment.APP_DEBUG=true"
+          elif [ "${{ matrix.app.name }}" = "Go" ]; then
+            EXTRA_VARS="$EXTRA_VARS -e app_environment.GOMAXPROCS=2"
+          fi
+          
+          ansible-playbook playbooks/${{ matrix.app.playbook }} \
+            --extra-vars "@vars/${{ matrix.app.var_file }}" \
+            $EXTRA_VARS \
+            --vault-password-file /tmp/vault_pass
+            
+      - name: Verify ${{ matrix.app.name }}
+        run: |
+          echo "Waiting for ${{ matrix.app.name }} app..."
+          sleep ${{ matrix.app.timeout }}
+          
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
+            http://${{ secrets.VM_HOST }}:${{ matrix.app.port }}/health)
+          
+          if [ "$RESPONSE" = "200" ]; then
+            echo "✅ ${{ matrix.app.name }} app is healthy!"
+          else
+            echo "❌ ${{ matrix.app.name }} app health check failed"
+            exit 1
+          fi

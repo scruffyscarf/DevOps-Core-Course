@@ -1,0 +1,105 @@
+---
+- name: Deploy All Applications
+  hosts: webservers
+  become: true
+  vars:
+    skip_failed: false
+    deploy_python: true
+    deploy_go: true
+
+  tasks:
+    - name: Include Python app variables
+      include_vars: ../vars/app_python.yml
+      when: deploy_python | bool
+      tags: [python, vars]
+
+    - name: Deploy Python Application
+      include_role:
+        name: web_app
+        apply:
+          tags: [python, deploy]
+      vars:
+        app_name: devops-python
+        docker_image: "{{ dockerhub_username }}/devops-info-service"
+        app_port: 8000
+        app_internal_port: 8000
+        compose_project_dir: "/opt/devops-python"
+      when: deploy_python | bool
+      tags: [python, deploy]
+
+    - name: Include Go app variables
+      include_vars: ../vars/app_bonus.yml
+      when: deploy_go | bool
+      tags: [go, vars]
+
+    - name: Deploy Go Application
+      include_role:
+        name: web_app
+        apply:
+          tags: [go, deploy]
+      vars:
+        app_name: devops-go
+        docker_image: "{{ dockerhub_username }}/devops-info-service-go"
+        app_port: 8001
+        app_internal_port: 8080
+        compose_project_dir: "/opt/devops-go"
+      when: deploy_go | bool
+      tags: [go, deploy]
+
+    - name: Include Rust app variables
+      include_vars: ../vars/app_bonus_rust.yml
+      when: deploy_rust | bool
+      tags: [rust, vars]
+
+    - name: Deploy Rust Application
+      include_role:
+        name: web_app
+        apply:
+          tags: [rust, deploy]
+      vars:
+        app_name: devops-rust
+        docker_image: "{{ dockerhub_username }}/devops-info-service-rust"
+        app_port: 8002
+        app_internal_port: 8080
+        compose_project_dir: "/opt/devops-rust"
+      when: deploy_rust | bool
+      tags: [rust, deploy]
+
+  post_tasks:
+    - name: Verify all applications
+      block:
+        - name: Check Python app
+          uri:
+            url: "http://localhost:8000/health"
+            method: GET
+          register: python_check
+          ignore_errors: true
+
+        - name: Check Go app
+          uri:
+            url: "http://localhost:8001/health"
+            method: GET
+          register: go_check
+          ignore_errors: true
+
+        - name: Check Rust app
+          uri:
+            url: "http://localhost:8002/health"
+            method: GET
+          register: rust_check
+          when: deploy_rust | bool
+          ignore_errors: true
+
+        - name: Display verification results
+          debug:
+            msg: |
+              ========================================
+              DEPLOYMENT VERIFICATION
+              
+              Python App (8000): {{ 'UP' if python_check.status == 200 else 'DOWN' }}
+              Go App (8001): {{ 'UP' if go_check.status == 200 else 'DOWN' }}
+              {% if deploy_rust | bool %}
+              Rust App (8002): {{ 'UP' if rust_check.status == 200 else 'DOWN' }}
+              {% endif %}
+              ========================================
+      tags: [verify, post_tasks]

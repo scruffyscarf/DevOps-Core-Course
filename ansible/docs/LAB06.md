@@ -1153,4 +1153,193 @@ curl http://localhost:8000/health
 
 ## CI/CD with GitHub Actions
 
-### 
+### Ansible lint passing
+
+```bash
+ansible-lint playbooks/*.yml
+```
+
+```bash
+Passed: 0 failure(s), 0 warning(s) in 3 files processed of 3 encountered. Last profile that met the validation criteria was 'production'.
+```
+
+### App responding
+
+```bash
+ansible-playbook ansible/playbooks/deploy.yml\
+            --vault-password-file /tmp/vault_pass \
+```
+
+```bash
+ok: [info-service] => {
+    "msg": [
+        "NAMES          IMAGE                              STATUS          PORTS",
+        "info-service   scruffyscarf/info-service:latest   Up 16 seconds   0.0.0.0:8000->5000/tcp"
+    ]
+}
+```
+
+### What are the security implications of storing SSH keys in GitHub Secrets?
+
+- Keys are encrypted at rest but exposed during workflow execution
+- No automatic rotation mechanism
+- Compromised GitHub token = exposed SSH keys
+- Limited audit trails for key usage
+- Keys persist in workflow logs if accidentally printed
+
+### How would you implement a staging → production deployment pipeline?
+
+1. Deploy to staging automatically on main merge
+2. Run integration/smoke tests against staging
+3. Manual approval gate
+4. Deploy to production using same artifacts
+5. Health checks post-deployment
+6. Automated rollback on failure thresholds
+
+### What would you add to make rollbacks possible?
+
+- Versioned artifacts
+- Blue/green deployments with traffic switch
+- Database migrations backward compatible
+- Feature flags for gradual rollout
+- Ansible playbook idempotency with previous state
+- Git tags for deployment states
+
+### How does self-hosted runner improve security compared to GitHub-hosted?
+
+- No GitHub IP ranges exposure
+- Keys/certificates never leave your network
+- Compliance with internal security policies
+- Isolated execution environment
+- No risk of cross-tenant attacks
+- Full audit control
+
+
+
+## Multi-App Deployment
+
+### Multi-app architecture explanation
+
+Multi-app deployment uses a single Ansible role deployed multiple times with different variables. This follows the DRY principle and provides:
+
+- **Single source of truth** for deployment logic
+- **Consistent configuration** across applications
+- **Reduced maintenance** overhead
+- **Tested and proven** deployment patterns
+
+### Variable file strategy
+
+```bash
+vars/
+├── app_python.yml # Python-specific configuration
+└── app_bonus.yml # Go-specific configuration
+```
+
+### Role reusability benefits
+
+```yaml
+# Single role, multiple invocations
+- include_role:
+    name: web_app
+  vars:
+    app_name: devops-python  # Different each time
+    docker_image: python-app # Different each time
+    app_port: 8000          # Different each time
+```
+
+### Port conflict resolution
+
+| Application | Host Port | Container Port | Purpose |
+|------------|-----------|----------------|---------|
+| Python App | 8000 | 8000 | Main Python service |
+| Go App | 8001 | 8080 | High-performance Go service |
+
+### Independent vs. combined deployment trade-offs
+
+| Approach | Pros | Cons | Best For |
+|------------|-----------|----------------|---------|
+| Independent | Granular control, Faster single app updates, clear responsibility | More commands, potential drift| Development, testing |
+| Combined | One command, consistent state, simple orchestration | Slower, all or nothing | Production, staging |
+
+
+
+## Multi-App CI/CD
+
+### Multi-app CI/CD architecture
+
+```bash
+┌─────────────────┐     ┌──────────────────┐
+│  Python App     │     │  Go App          │
+│  Workflow       │     │  Workflow        │
+├─────────────────┤     ├──────────────────┤
+│ • deploy-python │     │ • deploy-bonus   │
+│ • vars_python   │     │ • vars_bonus     │
+│ • port: 8000    │     │ • port: 8001     │
+└────────┬────────┘     └────────┬─────────┘
+         │                       │
+         └───────────┬───────────┘
+                     │
+            ┌────────▼────────┐
+            │  Target VM      │
+            │  • 2 containers │
+            │  • 2 ports      │
+            └─────────────────┘
+```
+
+### Workflow triggering logic
+
+```bash
+on:
+  push:
+    paths:
+      - 'ansible/vars/app_python.yml'
+      - 'ansible/playbooks/deploy_python.yml'
+      - 'ansible/roles/web_app/**'
+```
+
+```bash
+on:
+  push:
+    paths:
+      - 'ansible/vars/app_bonus.yml'
+      - 'ansible/playbooks/deploy_bonus.yml'
+      - 'ansible/roles/web_app/**'
+```
+
+### Path filter strategy
+
+```yaml
+# Prevent unnecessary runs
+paths-ignore:
+  - '**.md'           # Documentation
+  - 'docs/**'         # Docs directory
+  - '.gitignore'      # Git files
+  - 'LICENSE'         # License file
+```
+
+### Matrix vs separate workflows comparison
+
+| Aspect             | Separate Workflows        | Matrix Strategy        |
+|--------------------|--------------------------|------------------------|
+| Files              | 2 workflow files         | 1 workflow file        |
+| Trigger Control    | Granular per app       | All or nothing      |
+| Parallel Execution | Native                 | Matrix strategy     |
+| Readability        | Clear purpose          | More complex        |
+| Maintenance        | Two files to update    | Single source       |
+| Failure Isolation  | One app fails, other works | Matrix may fail partially |
+| Debugging          | Simple logs            | Nested logs         |
+
+
+### Evidence of independent deployments
+
+1. Python-Only Change
+    - Python workflow: RUNNING
+    - Go workflow: SKIPPED (path filter)
+
+2. Go-Only Change
+    - Python workflow: SKIPPED
+    - Go workflow: RUNNING
+
+3. Shared Role Change
+    - Python workflow: RUNNING
+    - Go workflow: RUNNING
