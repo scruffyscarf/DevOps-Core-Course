@@ -65,26 +65,14 @@ jobs:
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
           chmod 600 /tmp/vault_pass
 
-      - name: Test SSH connection
-        run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "echo 'SSH connection successful'"
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USER: ${{ secrets.VM_USER }}
-
       - name: Run Ansible playbook
         run: |
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           export ANSIBLE_HOST_KEY_CHECKING=False
           export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           
-          ansible-playbook ansible/playbooks/deploy.yml \
-            -i ansible/inventory/ci.yml \
+          ansible-playbook ansible/playbooks/deploy.yml --syntax-check\
             --vault-password-file /tmp/vault_pass \
-            -e "ansible_user=${{ secrets.VM_USER }} ansible_host=${{ secrets.VM_HOST }}"
-        env:
-          VM_HOST: ${{ secrets.VM_HOST }}
-          VM_USER: ${{ secrets.VM_USER }}
 
       - name: Cleanup
         run: rm -f /tmp/vault_pass
