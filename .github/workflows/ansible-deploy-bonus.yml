@@ -5,7 +5,7 @@ on:
     branches: [ main, master, lab06 ]
     paths:
       - 'ansible/vars/app_bonus.yml'
-      - 'ansible/playbooks/deploy_bonus.yml'
+      - 'ansible/playbooks/deploy-bonus.yml'
       - 'ansible/roles/web_app/tasks/**'
       - 'ansible/roles/web_app/templates/docker-compose.yml.j2'
       - '.github/workflows/ansible-deploy-bonus.yml'
@@ -13,7 +13,7 @@ on:
     branches: [ main, master, lab06 ]
     paths:
       - 'ansible/vars/app_bonus.yml'
-      - 'ansible/playbooks/deploy_bonus.yml'
+      - 'ansible/playbooks/deploy-bonus.yml'
 
 env:
   ANSIBLE_CONFIG: ansible/ansible.cfg
@@ -49,13 +49,12 @@ jobs:
       - name: Syntax check Go playbook
         run: |
           cd ansible
-          ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
-            --vault-password-file /tmp/vault_pass
+          ansible-playbook playbooks/deploy-bonus.yml
 
       - name: Run ansible-lint
         run: |
           cd ansible
-          ansible-lint playbooks/deploy_bonus.yml
+          ansible-lint playbooks/deploy-bonus.yml
 
   deploy:
     name: Deploy Go App

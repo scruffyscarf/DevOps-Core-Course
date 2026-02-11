@@ -21,7 +21,7 @@ jobs:
         app:
           - name: Python
             var_file: app_python.yml
-            playbook: deploy_python.yml
+            playbook: deploy-python.yml
             port: 8000
             image: info-service-python
             container_port: 8000

@@ -5,7 +5,7 @@ on:
     branches: [ main, master, lab06 ]
     paths:
       - 'ansible/vars/app_python.yml'
-      - 'ansible/playbooks/deploy_python.yml'
+      - 'ansible/playbooks/deploy-python.yml'
       - 'ansible/roles/web_app/tasks/**'
       - 'ansible/roles/web_app/templates/**'
       - 'ansible/roles/web_app/defaults/**'
@@ -50,13 +50,12 @@ jobs:
       - name: Syntax check Python playbook
         run: |
           cd ansible
-          ansible-playbook playbooks/deploy_python.yml --syntax-check\
-            --vault-password-file /tmp/vault_pass
+          ansible-playbook playbooks/deploy-python.yml --syntax-check
 
       - name: Run ansible-lint
         run: |
           cd ansible
-          ansible-lint playbooks/deploy_python.yml
+          ansible-lint playbooks/deploy-python.yml
 
   deploy:
     name: Deploy Python App
