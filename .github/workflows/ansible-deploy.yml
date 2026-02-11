@@ -62,15 +62,13 @@ jobs:
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
           chmod 600 /tmp/vault_pass
 
-      - name: Run Ansible playbook (FIXED)
+      - name: Run Ansible playbook
         run: |
-          echo "=== Current directory: $(pwd) ==="
-          echo ""
+          export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           
           ansible-playbook ansible/playbooks/deploy.yml \
             -i ansible/inventory/hosts.ini \
-            --vault-password-file /tmp/vault_pass \
-            --roles-path ansible/roles
+            --vault-password-file /tmp/vault_pass
 
       - name: Cleanup
         run: rm -f /tmp/vault_pass
