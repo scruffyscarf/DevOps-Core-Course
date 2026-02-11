@@ -1,5 +1,5 @@
 ---
-- name: Deploy Bonus (Go) Web Application
+- name: Deploy Go Web Application
   hosts: webservers
   become: true
   vars_files:

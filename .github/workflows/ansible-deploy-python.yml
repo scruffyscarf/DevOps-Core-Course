@@ -50,7 +50,8 @@ jobs:
       - name: Syntax check Python playbook
         run: |
           cd ansible
-          ansible-playbook playbooks/deploy_python.yml --syntax-check
+          ansible-playbook playbooks/deploy_python.yml --syntax-check\
+            --vault-password-file /tmp/vault_pass
 
       - name: Run ansible-lint
         run: |

@@ -64,8 +64,7 @@ jobs:
           ansible-playbook playbooks/deploy-python.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
           ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
-            --vault-password-file /tmp/vault_pass \
-          echo "${{ matrix.app.name }} deployment completed"
+            --vault-password-file /tmp/vault_pass
 
       - name: Cleanup
         run: rm -f /tmp/vault_pass
