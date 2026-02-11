@@ -27,7 +27,7 @@ env:
 
 jobs:
   lint:
-    name: Lint Python App Ansible
+    name: Lint Go App Ansible
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
