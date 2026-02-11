@@ -67,8 +67,17 @@ jobs:
           pip install docker
           ansible-galaxy collection install community.docker
 
+      - name: Debug SSH setup
+        run: |
+          pwd
+
+          ls -la ~/.ssh/
+          echo "Key length: $(wc -l ~/.ssh/id_ed25519)"
+          head -n 1 ~/.ssh/id_ed25519
+
       - name: Setup SSH
         run: |
+          env
           mkdir -p /home/runner/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/id_ed25519
           chmod 600 /home/runner/.ssh/id_ed25519
@@ -81,7 +90,7 @@ jobs:
 
       - name: Test SSH connection
         run: |
-          ssh -i ~/.ssh/id_ed25519.pub ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}
 
       - name: Deploy with Ansible
         run: |
