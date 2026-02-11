@@ -66,31 +66,11 @@ jobs:
           pip install ansible
           pip install docker
           ansible-galaxy collection install community.docker
-
-      - name: Debug SSH setup
-        run: |
-          pwd
-
-          ls -la ~/.ssh/
-          echo "Key length: $(wc -l ~/.ssh/id_ed25519)"
-          head -n 1 ~/.ssh/id_ed25519
-
-      - name: Setup SSH
-        run: |
-          env
-          mkdir -p /home/runner/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > /home/runner/.ssh/id_ed25519
-          chmod 600 /home/runner/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
           
       - name: Configure Ansible Vault
         run: |
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_password
           chmod 600 /tmp/vault_password
-
-      - name: Test SSH connection
-        run: |
-          ssh -i ~/.ssh/id_ed25519 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }}
 
       - name: Deploy with Ansible
         run: |
@@ -100,50 +80,23 @@ jobs:
             -i inventory/hosts.ini \
             --vault-password-file /tmp/vault_password \
             --tags "app_deploy,compose" \
+            --connection=local \
             --diff
           
       - name: Verify Deployment
         run: |
-          
-          echo "Waiting 15 seconds for application to initialize..."
           sleep 15
           
-          MAX_RETRIES=5
-          RETRY_COUNT=0
-          
-          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-            HEALTH_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-              http://${{ secrets.VM_HOST }}:8000/health || true)
-            
-            if [ "$HEALTH_STATUS" = "200" ]; then
-              echo "Health check passed (HTTP $HEALTH_STATUS)"
-              break
-            else
-              RETRY_COUNT=$((RETRY_COUNT+1))
-              echo "Attempt $RETRY_COUNT/$MAX_RETRIES: Health check failed (HTTP $HEALTH_STATUS)"
-              sleep 10
-            fi
-          done
-          
-          if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-            echo "Health check failed after $MAX_RETRIES attempts"
-            exit 1
-          fi
-          
-          echo "Testing main endpoint..."
-          RESPONSE=$(curl -s http://${{ secrets.VM_HOST }}:8000/ || echo "No response")
-          if [ -n "$RESPONSE" ]; then
-            echo "Main endpoint responded"
+          if curl -s -f http://localhost:8000/health > /dev/null; then
+            echo "Application is healthy"
           else
-            echo "Main endpoint failed"
+            echo "Health check failed"
+            docker ps -a
+            docker logs devops-app 2>&1 | tail -20
             exit 1
           fi
           
-          echo "=== All deployment verifications passed ==="
-          
-      - name: Cleanup sensitive files
+      - name: Cleanup
         if: always()
         run: |
-          rm -f ~/.ssh/id_ed25519.pub
           rm -f /tmp/vault_password
-          echo "Sensitive files removed"
