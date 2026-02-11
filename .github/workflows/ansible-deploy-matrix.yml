@@ -9,7 +9,7 @@ on:
 
 env:
   ANSIBLE_CONFIG: ansible/ansible.cfg
-  ANSIBLE_ROLES_PATH: ansible/roles
+  ANSIBLE_ROLES_PATH: ${{ github.workspace }}/ansible/roles
 
 jobs:
   matrix-deploy:
@@ -61,6 +61,7 @@ jobs:
       - name: Deploy ${{ matrix.app.name }}
         run: |
           cd ansible
+          export ANSIBLE_ROLES_PATH=$(pwd)/roles
           ansible-playbook playbooks/deploy-python.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
           ansible-playbook playbooks/deploy-bonus.yml --syntax-check\

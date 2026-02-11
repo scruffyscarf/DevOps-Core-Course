@@ -18,7 +18,7 @@ on:
 
 env:
   ANSIBLE_CONFIG: ansible/ansible.cfg
-  ANSIBLE_ROLES_PATH: ansible/roles
+  ANSIBLE_ROLES_PATH: ${{ github.workspace }}/ansible/roles
   ANSIBLE_HOST_KEY_CHECKING: False
   ANSIBLE_SSH_ARGS: '-o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   VM_HOST: ${{ secrets.VM_HOST }}
@@ -50,6 +50,7 @@ jobs:
       - name: Syntax check Python playbook
         run: |
           cd ansible
+          export ANSIBLE_ROLES_PATH=$(pwd)/roles
           ansible-playbook playbooks/deploy-python.yml --syntax-check
 
       - name: Run ansible-lint

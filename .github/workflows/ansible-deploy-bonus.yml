@@ -17,7 +17,7 @@ on:
 
 env:
   ANSIBLE_CONFIG: ansible/ansible.cfg
-  ANSIBLE_ROLES_PATH: ansible/roles
+  ANSIBLE_ROLES_PATH: ${{ github.workspace }}/ansible/roles
   ANSIBLE_HOST_KEY_CHECKING: False
   ANSIBLE_SSH_ARGS: '-o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
   VM_HOST: ${{ secrets.VM_HOST }}
@@ -49,6 +49,7 @@ jobs:
       - name: Syntax check Go playbook
         run: |
           cd ansible
+          export ANSIBLE_ROLES_PATH=$(pwd)/roles
           ansible-playbook playbooks/deploy-bonus.yml
 
       - name: Run ansible-lint
@@ -88,9 +89,8 @@ jobs:
 
       - name: Deploy Bonus
         run: |
-          export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
+          export ANSIBLE_ROLES_PATH=$(pwd)/roles
           export ANSIBLE_HOST_KEY_CHECKING=False
-          
           ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
 
