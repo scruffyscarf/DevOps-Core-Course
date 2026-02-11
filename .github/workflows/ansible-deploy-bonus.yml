@@ -50,7 +50,7 @@ jobs:
         run: |
           cd ansible
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
-          ansible-playbook playbooks/deploy-bonus.yml
+          ansible-playbook playbooks/deploy-bonus.yml --syntax-check
 
       - name: Run ansible-lint
         run: |
@@ -87,7 +87,7 @@ jobs:
           cp -r ansible/roles/* ansible/playbooks/roles/ 2>/dev/null || true
           cp -r roles/* ansible/playbooks/roles/ 2>/dev/null || true
 
-      - name: Deploy Bonus
+      - name: Deploy Go
         run: |
           cd ansible
           export ANSIBLE_ROLES_PATH=$(pwd)/roles
