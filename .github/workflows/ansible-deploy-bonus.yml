@@ -48,6 +48,7 @@ jobs:
 
       - name: Syntax check Go playbook
         run: |
+          cd ansible
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           ansible-playbook playbooks/deploy-bonus.yml
 
@@ -88,6 +89,7 @@ jobs:
 
       - name: Deploy Bonus
         run: |
+          cd ansible
           export ANSIBLE_ROLES_PATH=$(pwd)/roles
           export ANSIBLE_HOST_KEY_CHECKING=False
           ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
