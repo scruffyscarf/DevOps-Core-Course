@@ -24,7 +24,6 @@ env:
   VM_HOST: ${{ secrets.VM_HOST }}
   VM_USER: ${{ secrets.VM_USER }}
   APP_NAME: 'devops-python'
-  APP_PORT: '8000'
 
 jobs:
   lint:

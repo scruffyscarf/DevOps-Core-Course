@@ -70,7 +70,6 @@ jobs:
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           export ANSIBLE_HOST_KEY_CHECKING=False
           export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
-          
           ansible-playbook ansible/playbooks/deploy.yml --syntax-check\
             --vault-password-file /tmp/vault_pass \
 

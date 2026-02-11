@@ -62,8 +62,10 @@ jobs:
         run: |
           cd ansible
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
+
           ansible-playbook playbooks/deploy-python.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
+
           ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
 

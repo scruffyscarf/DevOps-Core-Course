@@ -23,7 +23,6 @@ env:
   VM_HOST: ${{ secrets.VM_HOST }}
   VM_USER: ${{ secrets.VM_USER }}
   APP_NAME: 'devops-go'
-  APP_PORT: '8001'
 
 jobs:
   lint:
