@@ -49,8 +49,7 @@ jobs:
 
       - name: Syntax check Python playbook
         run: |
-          cd ansible
-          export ANSIBLE_ROLES_PATH=$(pwd)/roles
+          export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           ansible-playbook playbooks/deploy-python.yml --syntax-check
 
       - name: Run ansible-lint
