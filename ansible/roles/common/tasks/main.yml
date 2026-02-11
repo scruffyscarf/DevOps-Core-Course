@@ -151,9 +151,10 @@
     - name: Configure SSH hardening
       lineinfile:
         path: /etc/ssh/sshd_config
-        regexp: "^#?{{ item.key }}"
+        regexp: "^{{ item.key }}(\\s+|$)"
         line: "{{ item.key }} {{ item.value }}"
         state: present
+        backup: yes
       loop:
         - { key: 'PasswordAuthentication', value: 'no' }
         - { key: 'PermitRootLogin', value: 'no' }
@@ -162,6 +163,7 @@
       tags:
         - config
         - ssh
+        - security
 
   tags:
     - config

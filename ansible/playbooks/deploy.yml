@@ -2,52 +2,8 @@
 - name: Deploy application
   hosts: webservers
   become: true
-  gather_facts: true
   vars_files:
     - "../group_vars/all.yml"
-
-  pre_tasks:
-    - name: Display deployment environment
-      debug:
-        msg: |
-          Deployment Environment:
-          Host: {{ inventory_hostname }}
-          Connection: {{ ansible_connection }}
-          User: {{ ansible_user_id }}
-          Python: {{ ansible_python_interpreter }}
-          Working Dir: {{ ansible_env.PWD | default('N/A') }}
-
-    - name: Check Docker installation
-      command: docker --version
-      register: docker_check
-      changed_when: false
-      ignore_errors: true
-      
-    - name: Install Docker if needed
-      block:
-        - name: Install Docker packages
-          apt:
-            name:
-              - docker.io
-              - docker-compose
-              - python3-docker
-            state: present
-            update_cache: yes
-            
-        - name: Start Docker service
-          service:
-            name: docker
-            state: started
-            enabled: yes
-            
-        - name: Add user to docker group
-          user:
-            name: "{{ ansible_user_id }}"
-            groups: docker
-            append: yes
-            
-      when: docker_check.rc != 0
-      tags: docker_setup
 
   roles:
     - role: web_app

@@ -1,6 +1,20 @@
 ---
+- name: Include cleanup tasks
+  include_tasks: cleanup.yml
+  tags:
+    - docker_cleanup
+
 - name: Docker prerequisites and repository setup block
   block:
+    - name: Create keyrings directory
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+      tags:
+        - docker_install
+        - gpg
+
     - name: Install Docker prerequisites
       apt:
         name:
@@ -9,6 +23,7 @@
           - gnupg
           - lsb-release
         state: present
+        update_cache: yes
       tags:
         - docker_install
         - prerequisites
@@ -16,52 +31,37 @@
     - name: Add Docker GPG key
       get_url:
         url: "https://download.docker.com/linux/ubuntu/gpg"
-        dest: /etc/apt/keyrings/docker.gpg
+        dest: /etc/apt/keyrings/docker.asc
         mode: '0644'
+      register: gpg_key_added
       tags:
         - docker_install
         - gpg
 
     - name: Add Docker repository
       apt_repository:
-        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] {{ docker_repo_url }} {{ ansible_facts['distribution_release'] }} stable"
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_facts['distribution_release'] }} stable"
         state: present
         update_cache: no
       tags:
         - docker_install
         - repository
 
-  rescue:
-    - name: Handle GPG key addition failure
-      debug:
-        msg: "GPG key addition failed, retrying..."
-      tags:
-        - rescue
-        - debug
-
-    - name: Wait before retry
-      pause:
-        seconds: 10
-      tags:
-        - rescue
-        - wait
-
-    - name: Retry Docker GPG key addition
-      apt_key:
-        url: "{{ docker_gpg_key_url }}"
-        state: present
-      when: gpg_key_added is failed
-      tags:
-        - rescue
-        - gpg
-
   always:
     - name: Update apt cache after repository setup
       apt:
-        update_cache: true
+        update_cache: yes
       tags:
         - docker_install
         - apt
+
+  rescue:
+    - name: Handle GPG key addition failure
+      debug:
+        msg: "GPG key addition failed, attempting alternative method..."
+      tags:
+        - rescue
+        - debug
 
   tags:
     - docker_install
