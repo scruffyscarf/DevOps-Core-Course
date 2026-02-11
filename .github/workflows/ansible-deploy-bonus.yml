@@ -85,5 +85,5 @@ jobs:
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           export ANSIBLE_HOST_KEY_CHECKING=False
           
-          ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
+          ansible-playbook playbooks/deploy_bonus.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
