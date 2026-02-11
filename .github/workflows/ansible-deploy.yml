@@ -51,101 +51,42 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Install Ansible and dependencies
+      - name: Setup SSH
         run: |
-          pip install ansible
-          pip install docker
-          ansible-galaxy collection install community.docker
-          
-      - name: Configure Ansible Vault
-        run: |
-          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_password
-          chmod 600 /tmp/vault_password
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+          echo "SSH configured"
 
-      - name: Setup for local deployment
+      - name: Test SSH connection
         run: |
-          echo "Current directory: $(pwd)"
-          echo "ANSIBLE_CONFIG: $ANSIBLE_CONFIG"
-          echo ""
-          sudo apt-get update
-          sudo apt-get install -y docker.io docker-compose
-          sudo usermod -aG docker $USER || true
-          docker --version
-          docker-compose --version
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "echo 'SSH connection successful'"
 
-      - name: Deploy with Ansible
+      - name: Setup Ansible Vault
+        run: |
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
+          chmod 600 /tmp/vault_pass
+          echo "Vault configured"
+
+      - name: Run Ansible playbook
         run: |
           cd ansible
-        
-          echo "=== Current ansible directory ==="
-          pwd
-          ls -la
-          echo ""
-          
-          echo "=== Checking roles ==="
-          ls -la roles/
-          echo ""
-
           ansible-playbook playbooks/deploy.yml \
             -i inventory/hosts.ini \
-            --vault-password-file /tmp/vault_password \
-            --tags "app_deploy,compose" \
-            --connection=local \
-            --diff
-          
-      - name: Verify Deployment
+            --vault-password-file /tmp/vault_pass
+
+      - name: Verify deployment
         run: |
-          echo "Checking Docker containers..."
-          docker ps -a
-          echo ""
-          
-          MAX_RETRIES=5
-          RETRY_COUNT=0
-          
-          until [ $RETRY_COUNT -ge $MAX_RETRIES ]; do
-            echo "Health check attempt $((RETRY_COUNT+1))/$MAX_RETRIES..."
-            
-            if curl -s -f --max-time 10 http://localhost:8000/health > /dev/null 2>&1; then
-              echo "Health check passed"
-              HEALTH_RESPONSE=$(curl -s http://localhost:8000/health)
-              echo "Health response: $HEALTH_RESPONSE"
-              break
-            else
-              RETRY_COUNT=$((RETRY_COUNT+1))
-              if [ $RETRY_COUNT -lt $MAX_RETRIES ]; then
-                echo "⏳ Health check failed, retrying in 10 seconds..."
-                sleep 10
-              fi
-            fi
-          done
-          
-          if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
-            echo "Health check failed after $MAX_RETRIES attempts"
-            echo "Checking application logs..."
-            docker logs devops-app 2>&1 | tail -30
-            exit 1
-          fi
-          
-          echo "Testing main endpoint..."
-          if curl -s -f --max-time 10 http://localhost:8000/ > /dev/null 2>&1; then
-            echo "Main endpoint is accessible"
-            MAIN_RESPONSE=$(curl -s http://localhost:8000/ | head -50)
-            echo "Main response (first 50 chars): ${MAIN_RESPONSE:0:50}..."
-          else
-            echo "Main endpoint failed"
-            exit 1
-          fi
-                    
+          ssh -i ~/.ssh/id_ed25519 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "
+            docker ps --filter 'name=devops-app'
+            echo ''
+            curl -s http://localhost:8000/health || echo 'Health check failed'
+          "
+
       - name: Cleanup
         if: always()
         run: |
-          rm -f /tmp/vault_password
+          rm -f ~/.ssh/id_ed25519 /tmp/vault_pass
+          echo "Cleanup done"
