@@ -52,6 +52,12 @@ jobs:
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
           chmod 600 /tmp/vault_pass
 
+      - name: Setup roles
+        run: |
+          mkdir -p ansible/playbooks/roles
+          cp -r ansible/roles/* ansible/playbooks/roles/ 2>/dev/null || true
+          cp -r roles/* ansible/playbooks/roles/ 2>/dev/null || true
+
       - name: Deploy ${{ matrix.app.name }}
         run: |
           cd ansible
