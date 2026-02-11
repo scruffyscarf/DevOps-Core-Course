@@ -86,5 +86,9 @@ jobs:
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
           export ANSIBLE_HOST_KEY_CHECKING=False
           
-          ansible-playbook playbooks/deploy_python.yml --syntax-check\
+          ansible-playbook playbooks/deploy-python.yml --syntax-check\
             --vault-password-file /tmp/vault_pass
+
+      - name: Cleanup
+        run: rm -f /tmp/vault_pass
+        if: always()

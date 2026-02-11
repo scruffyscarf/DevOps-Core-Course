@@ -13,7 +13,6 @@ skip_list:
   - var-naming[no-role-prefix]
   - fqcn[action-core]
   - key-order[task]
-  - load-failure
 
 exclude_paths:
   - roles/web_app/tasks/main.yml

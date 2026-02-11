@@ -55,6 +55,12 @@ jobs:
       - name: Deploy ${{ matrix.app.name }}
         run: |
           cd ansible
-          ansible-playbook playbooks/deploy_python.yml --syntax-check
-          ansible-playbook playbooks/deploy_bonus.yml --syntax-check
-          cho "${{ matrix.app.name }} deployment completed"
+          ansible-playbook playbooks/deploy-python.yml --syntax-check\
+            --vault-password-file /tmp/vault_pass
+          ansible-playbook playbooks/deploy-bonus.yml --syntax-check\
+            --vault-password-file /tmp/vault_pass \
+          echo "${{ matrix.app.name }} deployment completed"
+
+      - name: Cleanup
+        run: rm -f /tmp/vault_pass
+        if: always()
