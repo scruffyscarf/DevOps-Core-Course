@@ -22,6 +22,7 @@
 
   roles:
     - role: web_app
+      role_path: ../roles
       tags: [bonus, golang, web_app]
 
   post_tasks:

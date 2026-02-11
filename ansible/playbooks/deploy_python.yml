@@ -22,6 +22,7 @@
 
   roles:
     - role: web_app
+      role_path: ../roles
       tags: [python, web_app]
 
   post_tasks:
