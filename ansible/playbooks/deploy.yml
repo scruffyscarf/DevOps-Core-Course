@@ -1,6 +1,8 @@
 ---
 - name: Deploy application
-  hosts: webservers
+  hosts: localhost
+  connection: local
+  gather_facts: false
   become: true
   vars_files:
     - "../group_vars/all.yml"
