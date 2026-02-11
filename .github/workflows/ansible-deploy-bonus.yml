@@ -1,4 +1,4 @@
-name: Ansible Deployment Python App
+name: Ansible Deployment Go App
 
 on:
   push:
