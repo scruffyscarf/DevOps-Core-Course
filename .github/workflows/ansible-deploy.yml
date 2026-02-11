@@ -14,7 +14,10 @@ on:
 env:
   ANSIBLE_CONFIG: ansible/ansible.cfg
   ANSIBLE_ROLES_PATH: ansible/roles
-  INVENTORY_PATH: ansible/inventory/hosts.ini
+  ANSIBLE_HOST_KEY_CHECKING: False
+  ANSIBLE_SSH_ARGS: '-o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  VM_HOST: ${{ secrets.VM_HOST }}
+  VM_USER: ${{ secrets.VM_USER }}
 
 jobs:
   lint:
@@ -62,13 +65,27 @@ jobs:
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
           chmod 600 /tmp/vault_pass
 
+      - name: Test SSH connection
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "echo 'SSH connection successful'"
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
+
       - name: Run Ansible playbook
         run: |
           export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
+          export ANSIBLE_HOST_KEY_CHECKING=False
+          export ANSIBLE_SSH_ARGS="-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
           
           ansible-playbook ansible/playbooks/deploy.yml \
-            -i ansible/inventory/hosts.ini \
-            --vault-password-file /tmp/vault_pass
+            -i ansible/inventory/ci.yml \
+            --vault-password-file /tmp/vault_pass \
+            -e "ansible_user=${{ secrets.VM_USER }} ansible_host=${{ secrets.VM_HOST }}"
+        env:
+          VM_HOST: ${{ secrets.VM_HOST }}
+          VM_USER: ${{ secrets.VM_USER }}
 
       - name: Cleanup
         run: rm -f /tmp/vault_pass
+        if: always()
