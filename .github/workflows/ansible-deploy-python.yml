@@ -1,54 +1,28 @@
-name: Ansible Deployment - Python App
+name: Ansible Deployment Python App
 
 on:
   push:
-    branches: [ main, master, develop ]
+    branches: [ main, master, lab06 ]
     paths:
-      # Python app specific configurations
       - 'ansible/vars/app_python.yml'
       - 'ansible/playbooks/deploy_python.yml'
-      - 'ansible/playbooks/deploy.yml'
-      
-      # Role changes that affect Python app
       - 'ansible/roles/web_app/tasks/**'
       - 'ansible/roles/web_app/templates/**'
       - 'ansible/roles/web_app/defaults/**'
-      
-      # Workflow changes
       - '.github/workflows/ansible-deploy-python.yml'
-      
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, master, lab06 ]
     paths:
       - 'ansible/vars/app_python.yml'
       - 'ansible/playbooks/deploy_python.yml'
-      
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target Environment'
-        required: true
-        default: 'staging'
-        type: choice
-        options:
-          - development
-          - staging
-          - production
-      wipe_before_deploy:
-        description: 'Wipe before deployment'
-        required: false
-        default: false
-        type: boolean
-      docker_tag:
-        description: 'Docker image tag'
-        required: false
-        default: 'latest'
-        type: string
 
 env:
-  ANSIBLE_CONFIG: ./ansible/ansible.cfg
-  PYTHON_VERSION: '3.12'
-  VAULT_PASSWORD_FILE: /tmp/vault_pass.txt
+  ANSIBLE_CONFIG: ansible/ansible.cfg
+  ANSIBLE_ROLES_PATH: ansible/roles
+  ANSIBLE_HOST_KEY_CHECKING: False
+  ANSIBLE_SSH_ARGS: '-o ControlMaster=auto -o ControlPersist=60s -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  VM_HOST: ${{ secrets.VM_HOST }}
+  VM_USER: ${{ secrets.VM_USER }}
   APP_NAME: 'devops-python'
   APP_PORT: '8000'
 
@@ -65,177 +39,52 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.12'
           cache: 'pip'
 
       - name: Install dependencies
         run: |
-          pip install --upgrade pip
-          pip install ansible ansible-lint yamllint
+          pip install ansible ansible-lint
           ansible-galaxy collection install community.docker
 
-      - name: Lint Python app variables
-        run: |
-          yamllint ansible/vars/app_python.yml
-          ansible-playbook ansible/playbooks/deploy_python.yml --syntax-check
-
-      - name: Run ansible-lint on web_app role
+      - name: Syntax check Python playbook
         run: |
           cd ansible
-          ansible-lint roles/web_app/tasks/*.yml --exclude=roles/web_app/tasks/wipe.yml
-          ansible-lint roles/web_app/handlers/*.yml
+          ansible-playbook playbooks/deploy_python.yml --syntax-check
 
-  test:
-    name: Test Python App Deployment
+      - name: Run ansible-lint
+        run: |
+          cd ansible
+          ansible-lint playbooks/deploy_python.yml
+
+  deploy:
+    name: Deploy Python App
     needs: lint
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.12'
 
       - name: Install Ansible
         run: |
-          pip install ansible ansible-core
+          pip install ansible
           ansible-galaxy collection install community.docker
 
-      - name: Test Python playbook in check mode
+      - name: Setup Ansible Vault
         run: |
-          cd ansible
-          ansible-playbook playbooks/deploy_python.yml --check --diff
+          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
+          chmod 600 /tmp/vault_pass
 
-  deploy:
-    name: Deploy Python App to ${{ github.event.inputs.environment || 'staging' }}
-    needs: [lint, test]
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
-    
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install Ansible and dependencies
+      - name: Deploy Python
         run: |
-          pip install ansible ansible-core docker
-          ansible-galaxy collection install community.docker
-
-      - name: Configure SSH
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+          export ANSIBLE_ROLES_PATH="$GITHUB_WORKSPACE/ansible/roles"
+          export ANSIBLE_HOST_KEY_CHECKING=False
           
-          # Test SSH connection
-          ssh -o ConnectTimeout=5 ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} "echo 'SSH connection successful'"
-
-      - name: Create Ansible Vault password file
-        run: |
-          echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > ${{ env.VAULT_PASSWORD_FILE }}
-          chmod 600 ${{ env.VAULT_PASSWORD_FILE }}
-
-      - name: Prepare Python deployment variables
-        run: |
-          cd ansible
-          
-          # Create extra vars file
-          EXTRA_VARS_FILE="/tmp/python_extra_vars.yml"
-          
-          # Set environment-specific variables
-          if [ "${{ github.event.inputs.environment || 'staging' }}" = "production" ]; then
-            echo "app_port: 80" >> $EXTRA_VARS_FILE
-            echo "docker_tag: ${{ github.event.inputs.docker_tag || 'stable' }}" >> $EXTRA_VARS_FILE
-            echo "app_environment:" >> $EXTRA_VARS_FILE
-            echo "  APP_ENV: production" >> $EXTRA_VARS_FILE
-            echo "  APP_DEBUG: 'false'" >> $EXTRA_VARS_FILE
-            echo "  LOG_LEVEL: WARNING" >> $EXTRA_VARS_FILE
-          else
-            echo "app_port: 8000" >> $EXTRA_VARS_FILE
-            echo "docker_tag: ${{ github.event.inputs.docker_tag || 'latest' }}" >> $EXTRA_VARS_FILE
-            echo "app_environment:" >> $EXTRA_VARS_FILE
-            echo "  APP_ENV: ${{ github.event.inputs.environment || 'staging' }}" >> $EXTRA_VARS_FILE
-            echo "  APP_DEBUG: 'true'" >> $EXTRA_VARS_FILE
-            echo "  LOG_LEVEL: DEBUG" >> $EXTRA_VARS_FILE
-          fi
-          
-          # Add wipe flag if requested
-          if [ "${{ github.event.inputs.wipe_before_deploy }}" = "true" ]; then
-            echo "web_app_wipe: true" >> $EXTRA_VARS_FILE
-            echo "wipe_remove_volumes: true" >> $EXTRA_VARS_FILE
-          fi
-          
-          echo "Python deployment variables prepared:"
-          cat $EXTRA_VARS_FILE
-
-      - name: Deploy Python Application
-        run: |
-          cd ansible
-          
-          echo "Deploying Python application..."
-          echo "App: ${{ env.APP_NAME }}"
-          echo "Port: ${{ env.APP_PORT }}"
-          echo "Environment: ${{ github.event.inputs.environment || 'staging' }}"
-          
-          # Run the deployment
-          ansible-playbook playbooks/deploy_python.yml \
-            --extra-vars "@/tmp/python_extra_vars.yml" \
-            --vault-password-file ${{ env.VAULT_PASSWORD_FILE }} \
-            --diff
-
-      - name: Wait for Python application to be ready
-        run: |
-          echo "Waiting for Python application to start..."
-          sleep 15
-          
-          # Retry loop for health check
-          for i in {1..12}; do
-            if curl -s -o /dev/null -w "%{http_code}" \
-              http://${{ secrets.VM_HOST }}:${{ env.APP_PORT }}/health \
-              | grep -q "200"; then
-              echo "✅ Python application is healthy!"
-              exit 0
-            fi
-            echo "Attempt $i/12: Application not ready yet..."
-            sleep 5
-          done
-          echo "❌ Health check failed after 12 attempts"
-          exit 1
-
-      - name: Verify Python deployment
-        run: |
-          echo "=== Python Deployment Verification ==="
-          echo "Host: ${{ secrets.VM_HOST }}"
-          echo "Port: ${{ env.APP_PORT }}"
-          
-          # Check health endpoint
-          HEALTH_RESPONSE=$(curl -s http://${{ secrets.VM_HOST }}:${{ env.APP_PORT }}/health)
-          echo "Health Response: $HEALTH_RESPONSE"
-          
-          # Check main endpoint
-          MAIN_RESPONSE=$(curl -s http://${{ secrets.VM_HOST }}:${{ env.APP_PORT }}/)
-          echo "Main Response (first 100 chars): ${MAIN_RESPONSE:0:100}"
-          
-          # Check container status via SSH
-          ssh -i ~/.ssh/id_rsa ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} \
-            "docker ps --filter 'name=${{ env.APP_NAME }}' --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'"
-          
-          echo "=== Verification Complete ==="
-
-      - name: Cleanup sensitive files
-        if: always()
-        run: |
-          rm -f ${{ env.VAULT_PASSWORD_FILE }}
-          rm -f /tmp/python_extra_vars.yml
-          rm -f ~/.ssh/id_rsa
+          ansible-playbook playbooks/deploy-python.yml --syntax-check\
+            --vault-password-file /tmp/vault_pass

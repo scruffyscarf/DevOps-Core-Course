@@ -6,7 +6,7 @@
     enabled: true
   listen: "restart docker"
 
-- name: restart sshd
+- name: Restart sshd
   systemd:
     name: sshd
     state: restarted

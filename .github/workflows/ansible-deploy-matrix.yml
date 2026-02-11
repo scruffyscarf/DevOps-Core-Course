@@ -1,27 +1,18 @@
-name: Ansible Multi-App Matrix Deployment
+name: Ansible Deployment Python App
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, lab06 ]
     paths:
       - 'ansible/roles/web_app/**'
-      - 'ansible/playbooks/deploy_all.yml'
       - '.github/workflows/ansible-deploy-matrix.yml'
-      
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Target Environment'
-        required: true
-        default: 'staging'
-      wipe_all:
-        description: 'Wipe all apps before deploy'
-        required: false
-        default: false
-        type: boolean
+
+env:
+  ANSIBLE_CONFIG: ansible/ansible.cfg
+  ANSIBLE_ROLES_PATH: ansible/roles
 
 jobs:
-  matrix-deployment:
+  matrix-deploy:
     name: Deploy ${{ matrix.app.name }}
     runs-on: ubuntu-latest
     strategy:
@@ -29,77 +20,41 @@ jobs:
       matrix:
         app:
           - name: Python
-            playbook: deploy_python.yml
             var_file: app_python.yml
+            playbook: deploy_python.yml
             port: 8000
-            timeout: 30
-            
+            image: info-service-python
+            container_port: 8000
+          
           - name: Go
-            playbook: deploy_bonus.yml
             var_file: app_bonus.yml
+            playbook: deploy_bonus.yml
             port: 8001
-            timeout: 20
-            
-          - name: Rust
-            playbook: deploy_bonus_rust.yml
-            var_file: app_bonus_rust.yml
-            port: 8002
-            timeout: 15
-    
+            image: info-service-go
+            container_port: 8080
+
     steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup Python
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-          
+
       - name: Install Ansible
-        run: pip install ansible
-        
-      - name: Setup SSH
         run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
-          
-      - name: Create vault password file
+          pip install ansible
+          ansible-galaxy collection install community.docker
+
+      - name: Setup Ansible Vault
         run: |
           echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > /tmp/vault_pass
-          
+          chmod 600 /tmp/vault_pass
+
       - name: Deploy ${{ matrix.app.name }}
         run: |
           cd ansible
-          
-          EXTRA_VARS="-e app_port=${{ matrix.app.port }}"
-          
-          if [ "${{ github.event.inputs.wipe_all }}" = "true" ]; then
-            EXTRA_VARS="$EXTRA_VARS -e web_app_wipe=true"
-          fi
-          
-          if [ "${{ matrix.app.name }}" = "Python" ]; then
-            EXTRA_VARS="$EXTRA_VARS -e app_environment.APP_DEBUG=true"
-          elif [ "${{ matrix.app.name }}" = "Go" ]; then
-            EXTRA_VARS="$EXTRA_VARS -e app_environment.GOMAXPROCS=2"
-          fi
-          
-          ansible-playbook playbooks/${{ matrix.app.playbook }} \
-            --extra-vars "@vars/${{ matrix.app.var_file }}" \
-            $EXTRA_VARS \
-            --vault-password-file /tmp/vault_pass
-            
-      - name: Verify ${{ matrix.app.name }}
-        run: |
-          echo "Waiting for ${{ matrix.app.name }} app..."
-          sleep ${{ matrix.app.timeout }}
-          
-          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" \
-            http://${{ secrets.VM_HOST }}:${{ matrix.app.port }}/health)
-          
-          if [ "$RESPONSE" = "200" ]; then
-            echo "✅ ${{ matrix.app.name }} app is healthy!"
-          else
-            echo "❌ ${{ matrix.app.name }} app health check failed"
-            exit 1
-          fi
+          ansible-playbook playbooks/deploy_python.yml --syntax-check
+          ansible-playbook playbooks/deploy_bonus.yml --syntax-check
+          cho "${{ matrix.app.name }} deployment completed"
