@@ -15,7 +15,7 @@ import psutil
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", 5050))
 DEBUG = os.getenv("DEBUG", "False").lower() == "true"
-APP_NAME = os.getenv("APP_NAME", "devops-info-service")
+APP_NAME = os.getenv("APP_NAME", "info-service")
 
 app = Flask(__name__)
 start_time = time.time()
@@ -127,6 +127,10 @@ def main_info():
             hours = uptime_seconds // 3600
             minutes = (uptime_seconds % 3600) // 60
 
+            # Получаем информацию о процессе
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            
             response = {
                 "service": {
                     "name": APP_NAME,
@@ -144,11 +148,24 @@ def main_info():
                     "cpu_count": os.cpu_count(),
                     "python_version": platform.python_version()
                 },
+                "runtime": {
+                    "start_time": start_time,
+                    "current_time": time.time(),
+                    "memory_usage_bytes": memory_info.rss,
+                    "memory_usage_mb": round(memory_info.rss / (1024 * 1024), 2),
+                    "cpu_percent": process.cpu_percent(interval=0.1)
+                },
                 "request": {
                     "client_ip": request.remote_addr,
                     "user_agent": request.headers.get("User-Agent"),
                     "method": request.method,
                     "path": request.path
+                },
+                "endpoints": {
+                    "/": "Main service information",
+                    "/health": "Health check endpoint",
+                    "/metrics": "Prometheus metrics endpoint",
+                    "/slow": "Endpoint with artificial delay for testing"
                 }
             }
 
