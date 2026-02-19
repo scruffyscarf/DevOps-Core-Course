@@ -1,0 +1,34 @@
+{
+    "app": {
+        "name": "info-service",
+        "environment": "{{ .Values.environment }}",
+        "version": "1.0.0",
+        "debug": {
+            { .Values.debug | default false}
+        }
+    },
+    "features": {
+        "enable_vault": {
+            { .Values.vault.enabled | default false}
+        },
+        "enable_metrics": true,
+        "enable_visits": true,
+        "enable_secrets_endpoint": {
+            { .Values.debug | default false}
+        }
+    },
+    "logging": {
+        "level": "{{ .Values.logLevel | default "INFO" }}",
+        "format": "json"
+    },
+    "limits": {
+        "max_visits_file_size": 1048576,
+        "request_timeout": 30
+    },
+    "endpoints": {
+        "health": "/health",
+        "metrics": "/metrics",
+        "visits": "/visits",
+        "secrets": "/secrets"
+    }
+}

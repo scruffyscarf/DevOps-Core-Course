@@ -1,5 +1,7 @@
 # Lab 11 — Kubernetes Secrets & HashiCorp Vault
 
+
+
 ## Kubernetes Secrets
 
 ### Creating and viewing the secret

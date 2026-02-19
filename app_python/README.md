@@ -63,3 +63,26 @@ If the image is published to Docker Hub, it can be pulled directly:
 ```bash
 docker pull <dockerhub_username>/info-service
 ```
+
+### Persistence Features
+
+The application now tracks visit counts persistently:
+
+- **Endpoint**: `/visits` returns current visit count
+- **Storage**: Count stored in `/data/visits.txt`
+- **File locking**: Uses `fcntl` for concurrent access safety
+- **Persistence**: Data survives container restarts via Docker volumes
+
+### Testing Persistence
+
+```bash
+# Make requests
+curl http://localhost:5050/
+curl http://localhost:5050/visits
+
+# Restart container
+docker-compose restart
+
+# Verify count persisted
+curl http://localhost:5050/visits
+```
